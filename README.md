@@ -1,4 +1,4 @@
-# EPSNet: Efficient Panoptic Segmentation Network with Cross-layer Attention Fusion
+﻿# EPSNet: Efficient Panoptic Segmentation Network with Cross-layer Attention Fusion
 
 
 This project hosts the code for implementing the EPSNet for panoptic segmentation.
@@ -8,14 +8,14 @@ This project hosts the code for implementing the EPSNet for panoptic segmentatio
 
 
 ## Models
-Here are our EPSNet models trained on COCO Panoptic dataset along with their FPS on a 2080Ti and PQ on `test-dev`:
+Here are our EPSNet models trained on COCO Panoptic dataset along with their FPS on a 2080Ti and PQ on `val`:
 
 
 
-| Image Size | Backbone      | FPS  | PQ  | Weights                                                                                                              |
-|:----------:|:-------------:|:----:|:----:|----------------------------------------------------------------------------------------------------------------------|--------|
-| 550        | Resnet101-FPN | 33.5 | 29.8 | [Download]()
-| 550        | Resnet50-FPN | 33.5 | 29.8 | [Download]()
+| Image Size | Backbone      | FPS  | PQ  | Weights |
+|:----------:|:-------------:|:----:|:----:|:----:|
+| 550        | Resnet50-FPN | 20.6 | 35.8 | [Download](https://drive.google.com/file/d/1klQX2b9SSNnfmxPGoCBBgXxeybeX82yy/view?usp=sharing)
+| 550        | Resnet101-FPN | 19.6 | 38.6  | [Download](https://drive.google.com/file/d/1pO1Vxy5tINr7YhZLfIsqjNerGhenx7o4/view?usp=sharing)
 
 
 To evalute the model, put the corresponding weights file in the `./weights` directory and run one of the following commands. The name of each config is everything before the numbers in the file name (e.g., `epsnet` for `epsnet_54_800000.pth`).
@@ -104,7 +104,6 @@ By default, we train on COCO. Make sure to download the entire dataset using the
  - To train, grab an imagenet-pretrained model and put it in `./weights`.
    - For Resnet101, download `resnet101_reducedfc.pth` from [here](https://drive.google.com/file/d/1tvqFPd4bJtakOlmn-uIA492g2qurRChj/view?usp=sharing).
    - For Resnet50, download `resnet50-19c8e357.pth` from [here](https://drive.google.com/file/d/1Jy3yCdbatgXa5YYIdTCRrSV0S9V5g1rn/view?usp=sharing).
-   - For Darknet53, download `darknet53.pth` from [here](https://drive.google.com/file/d/17Y431j4sagFpSReuPNoFcj9h7azDTZFf/view?usp=sharing).
  - Run one of the training commands below.
    - Note that you can press ctrl+c while training and it will save an `*_interrupt.pth` file at the current iteration.
    - All weights are saved in the `./weights` directory by default with the file name `<config>_<epoch>_<iter>.pth`.
