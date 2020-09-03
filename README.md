@@ -6,6 +6,8 @@ This project hosts the code for implementing the EPSNet for panoptic segmentatio
  - [EPSNet: Efficient Panoptic Segmentation Network with Cross-layer Attention Fusion](https://arxiv.org/abs/2003.10142)
 
 Some examples from our EPSNet model:
+
+
 ![](https://i.imgur.com/wGbYWWI.png)
 ![](https://i.imgur.com/VEqaMRa.png)
 ![](https://i.imgur.com/CozJCfA.png)
