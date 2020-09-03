@@ -420,26 +420,28 @@ def prep_panoptic_display(dets, img, h, w, undo_transform=True, overlap_thr=0.5,
         h, w, _ = img.shape
 
     with timer.env('Postprocess'):
-        classes, scores, boxes, masks = postprocess(dets, w, h, crop_masks=args.crop, score_threshold=args.score_threshold)
-        stuff_mask = postprocess_stuff_lincomb(dets, h, w)
+        if cfg.sem_lincomb is True:
+            stuff_mask = postprocess_stuff_lincomb(dets, h, w)
+        else:
+            stuff_mask = postprocess_stuff(dets, h, w)
+        if 'mask' not in dets[0].keys(): # handle cases of no remaining instance masks 
+            masks = torch.zeros(0, h, w)
+        else:
+            classes, scores, boxes, masks = postprocess(dets, w, h, crop_masks=args.crop, score_threshold=args.score_threshold)
+            classes = list(classes.cpu().numpy().astype(int))
+            scores = list(scores.cpu().numpy().astype(float))
+            boxes = boxes.cuda()
+            if masks.size(0) > 0:
+                stuff_mask[0, :, :] = stuff_mask[-1, :, :] - torch.max(masks, dim=0)[0] # unknown prediction
+    
+    stuff_mask = stuff_mask[:-1, :, :]
+    masks = masks.view(-1, h, w).cpu().numpy().astype(np.uint8)
+    stuff_mask =  torch.argmax(stuff_mask, dim=0).cpu().numpy().astype(np.uint8)
 
-        # if classes.size(0) == 0:
-        #     return
-
-        classes = list(classes.cpu().numpy().astype(int))
-        scores = list(scores.cpu().numpy().astype(float))
-        masks = masks.view(-1, h*w).cuda()
-        boxes = boxes.cuda()
-
-    with timer.env('JSON Output'):
-        masks = masks.view(-1, h, w).cpu().numpy().astype(np.uint8)
-        stuff_mask = stuff_mask.cpu().numpy().astype(np.uint8)
-                    
-        id_generator = IdGenerator(pan_categories)
-        pan_segm_id = np.zeros((h,w), dtype=np.uint32)
-        used = None
-
-    with timer.env('panoptic display'):
+    id_generator = IdGenerator(pan_categories)
+    pan_segm_id = np.zeros((h,w), dtype=np.uint32)
+    used = None
+    with timer.env('panoptic display thing'):
         for i in range(masks.shape[0]):
             if (boxes[i, 3] - boxes[i, 1]) * (boxes[i, 2] - boxes[i, 0]) <= 0:
                 continue
@@ -460,25 +462,31 @@ def prep_panoptic_display(dets, img, h, w, undo_transform=True, overlap_thr=0.5,
             cat_id = get_coco_cat(int(classes[i]))
             segment_id = id_generator.get_id(cat_id)
             pan_segm_id[mask.astype(np.bool_)] = segment_id
-    with timer.env('panoptic display stuff'):
+
         pan_left = (pan_segm_id == 0) 
-        for c in range(1, stuff_mask.shape[0]-1):
-            mask = stuff_mask[c,:,:].astype(np.bool_)
+    with timer.env('panoptic display stuff'):
+        stuff_idx = np.unique(stuff_mask) #all predicted segment with their panoptic idx
+
+        for c in stuff_idx: # skip background and things 
+            if c == 0 :
+                continue
+            mask = (stuff_mask==c).astype(np.bool_)
             mask_left = pan_left & mask
             if mask_left.sum()  < stuff_area_limit:
                 continue
             cat_id = get_coco_cat(c, is_stuff=True)
             segment_id = id_generator.get_id(cat_id)
             pan_segm_id[mask_left] = segment_id
-            pan_left = pan_left + mask_left
+            # pan_left = pan_left + mask_left
 
     img = img.cpu().numpy().astype(np.uint8)
     img_pan_segm = img.copy()
     img_pan_segm[pan_segm_id != 0] = 0    
-    img_pan_segm += id2rgb(pan_segm_id)
+    img_pan_segm += cv2.cvtColor(id2rgb(pan_segm_id), cv2.COLOR_RGB2BGR)
     img_out = cv2.addWeighted(img, alpha, img_pan_segm, 1-alpha, 0)
 
     return img_out
+
 
 
 def prep_unified_result(dets, img, file_name, h, w, image_id, segm_folder, overlap_thr=0.5, stuff_area_limit=64*64):
@@ -572,7 +580,6 @@ def prep_unified_display(dets, img, h, w, undo_transform=True, overlap_thr=0.5, 
 def badhash(x):
     """
     Just a quick and dirty hash function for doing a deterministic shuffle based on image_id.
-
     Source:
     https://stackoverflow.com/questions/664014/what-integer-hash-function-are-good-that-accepts-an-integer-hash-key
     """
@@ -599,13 +606,8 @@ def evalimage(net:EPSNet, path:str, save_path:str=None):
     if save_path is None:
         img_numpy = img_numpy[:, :, (2, 1, 0)]
 
-    if save_path is None:
-        plt.imshow(img_numpy)
-        plt.title(path)
-        plt.show()
     else:
         cv2.imwrite(save_path, img_numpy)
-        # plt.imsave(save_path, img_numpy)
 
 def evalimages(net:EPSNet, input_folder:str, output_folder:str):
     if not os.path.exists(output_folder):
@@ -1145,5 +1147,3 @@ if __name__ == '__main__':
             net = net.cuda()
         
         evaluate(net, dataset)
-
-
